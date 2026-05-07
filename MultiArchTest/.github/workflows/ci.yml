@@ -1,4 +1,4 @@
-name: Multi-Architecture Build Validation
+
 
 on:
   push:
