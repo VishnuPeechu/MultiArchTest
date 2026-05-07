@@ -1,0 +1,63 @@
+name: Multi-Architecture Build Validation
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    strategy:
+      matrix:
+        runtime:
+          - win-x64
+          - win-arm64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Display .NET Info
+        run: dotnet --info
+
+      - name: Restore dependencies
+        run: dotnet restore MultiArchTest\MultiArchTest.csproj
+
+      - name: Build Project
+        run: |
+          dotnet build MultiArchTest\MultiArchTest.csproj `
+            -c Debug `
+            -r ${{ matrix.runtime }} `
+            --self-contained false
+
+      - name: Verify Output Directory
+        run: |
+          Write-Host "Checking output path..."
+
+          $path = "MultiArchTest\bin\Debug\net10.0\${{ matrix.runtime }}"
+
+          if (Test-Path $path) {
+              Write-Host "Output exists:"
+              Get-ChildItem $path
+          }
+          else {
+              Write-Error "Output folder missing!"
+              exit 1
+          }
+        shell: pwsh
+
+      - name: Print Binary Hash
+        run: |
+          $dllPath = "MultiArchTest\bin\Debug\net10.0\${{ matrix.runtime }}\MultiArchTest.dll"
+
+          Write-Host "Runtime: ${{ matrix.runtime }}"
+          Get-FileHash $dllPath
+        shell: pwsh
